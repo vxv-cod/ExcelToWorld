@@ -7,6 +7,14 @@ import VXVtranslittext
 from time import sleep
 # os.system("CLS")
 
+def importdata(sheet, StartRow, StartCol, EndRow, EndCol):
+    '''Собираем данные из диапозона ячеек'''
+    cel = sheet.Range(sheet.Cells(StartRow, StartCol), sheet.Cells(EndRow, EndCol))
+    vals = cel.Formula
+    if StartCol == EndCol:
+        vals = [vals[i][x] for i in range(len(vals)) for x in range(len(vals[i]))]
+    return vals
+
 
 def GO(ui, Form, sig):
     print('---------------------------------------------------------')
@@ -25,6 +33,7 @@ def GO(ui, Form, sig):
     '''Находим номера крайней строки и столбца в таблице Excel'''
     EndRow, EndCol = EndIndexRowCol(sheet)
     StartRow, StartCol = sheet.UsedRange.Row, sheet.UsedRange.Column
+    count_col = sheet.UsedRange.Columns.Count
     '''Выбираем таблицу в Excel'''
     tabEx = sheet.Range(sheet.Cells(StartRow, StartCol), sheet.Cells(EndRow, EndCol))
     '''Копируем выбранный диапозон из Excel'''
@@ -37,6 +46,7 @@ def GO(ui, Form, sig):
     Word = win32com.client.Dispatch("Word.Application")
     # Word = win32com.client.gencache.EnsureDispatch("Word.Application")
     Word.Visible = 1
+    Word.DisplayAlerts = False
     """Добавляем документ по шаблону"""
     sleep(1)
 
@@ -54,8 +64,17 @@ def GO(ui, Form, sig):
     if ui.comboBox.currentIndex() == 1:
         fail = os.getcwd() + "\\Формат А4 (книжный).dotx"
     if ui.comboBox.currentIndex() == 2:
-        fail = os.getcwd() + "\\Шаблон_Спецификация оборудования, изделий и материалов.dotx"
-
+        fail = os.getcwd() + "\\Формат А3 (альбомный).dotx"
+    if ui.comboBox.currentIndex() == 3:
+        fail = os.getcwd() + "\\Формат А3 (книжный).dotx"
+    if ui.comboBox.currentIndex() == 4:
+        # fail = os.getcwd() + "\\Шаблон_Спецификация оборудования, изделий и материалов.dotx"
+        fail = os.getcwd() + "\\Формат А3 (альбомный).dotx"
+        if count_col != 9:
+            text = f"Спецификация оборудования, изделий и материалов должна содержать 9 столбцов"
+            sig.signal_err.emit(Form, text)
+            sig.signal_label.emit(ui.label, "Ошибка")
+            return
     '''Сохранить Excel как'''
     # # 3129/5069/2-Р-001.004.390-НВК-01-С-001
     # nameobjextproekt = VXVtranslittext.GO(nameobjextproekt)
@@ -70,7 +89,8 @@ def GO(ui, Form, sig):
             return
     saveAsNameobjextproekt = VXVtranslittext.GO(nameobjextproekt)
     FileName = f"{strPath}\\{saveAsNameobjextproekt}.docx"
-
+    if '\n' in FileName:
+        FileName = FileName.replace('\n', '')
     
     def OriForm():
         '''Определение ориентации и формата (размера) листа'''
@@ -90,6 +110,7 @@ def GO(ui, Form, sig):
         Doc = Word.Documents.Add(fail)
 
     '''Проверяем соответствие ориентации листа согласно выбору'''
+    sleep(1)
     OrientationLista, FormatLista = OriForm()
     if ui.comboBox.currentIndex() == 0:
         if OrientationLista != 1 or FormatLista != 7:
@@ -104,36 +125,32 @@ def GO(ui, Form, sig):
             Doc = Word.Documents.Add(fail)
 
     if ui.comboBox.currentIndex() == 2:
-        if OrientationLista != 1 or FormatLista != 6:
+        if OrientationLista != 1 or FormatLista == 7:
+            Doc.Close(False)
+            sleep(1)
+            Doc = Word.Documents.Add(fail)
+
+    if ui.comboBox.currentIndex() == 3:
+        if OrientationLista == 1 or FormatLista == 7:
+            Doc.Close(False)
+            sleep(1)
+            Doc = Word.Documents.Add(fail)
+
+    if ui.comboBox.currentIndex() == 4:
+        if OrientationLista != 1 or FormatLista == 7:
             Doc.Close(False)
             sleep(1)
             Doc = Word.Documents.Add(fail)
     
-
-    
-    # print(f"ffff = {ffff}")
-
-
     Doc.Activate()
-
-
-
-    '''fff = Doc.PageSetup.Orientation
-    print("aaaaaaa  ", fff)
-    '''
-
-
-
-
-
 
     if ui.checkBox_3.isChecked() == True:
         Doc.SaveAs(FileName)
-        sleep(0.5)
-    print('-----')
+    sleep(1)
+
     '''Выбираем все документе'''
     myRange = Doc.Range()
-    sleep(0.5)
+    sleep(1)
     '''Вставляем скопированную таблицу в World'''
     myRange.PasteExcelTable(False, False, False)
     '''Подключаемся к таблице'''
@@ -152,13 +169,36 @@ def GO(ui, Form, sig):
     tabWord.AllowPageBreaks = True
     tabWord.AllowAutoFit = True
 
+    # '''Ширина столбцов'''
+    # if ui.comboBox.currentIndex() == 4:
+    #     WidthList = [2, 13, 6, 3.5, 4.5, 2, 2, 2.5, 4]
+    #     tabWord.PreferredWidthType = 2
+    #     for i in range(1, len(WidthList) + 1):
+    #         tabWord.Columns(i).PreferredWidth = WidthList[i-1]
+
+
     '''Ширина столбцов'''
-    print(f"ui.comboBox.currentIndex() = {ui.comboBox.currentIndex()}")
-    if ui.comboBox.currentIndex() == 2:
-        WidthList = [2, 13, 6, 3.5, 4.5, 2, 2, 2.5, 4]
-        tabWord.PreferredWidthType = 2
+    if ui.comboBox.currentIndex() == 4:
+        fistRow = importdata(sheet, 1, 2, 10, 2)
+        fistRow = [fistRow.index(i) + 1  for i in fistRow if i == 'Наименование']
+        print(fistRow[0])
+        PT = 28.34646
+        '''Установка единицы измерения размера таблицы''' 
+        tabWord.PreferredWidthType = 3    # CM        
+        WidthList = [1.0, 5.0, 3.5, 3.5, 5.0, 2.7, 2.7, 2.7, 2.7]
+        '''Задаем общую ширину таблицы для более точного определения'''
+        tabWord.PreferredWidth = sum(WidthList) * PT
+        '''Проходим по всем колонкам для установки размеров из списка'''
         for i in range(1, len(WidthList) + 1):
-            tabWord.Columns(i).PreferredWidth = WidthList[i-1]
+            col = tabWord.Cell(1, i).Range.Columns
+            col.PreferredWidthType = 3    # CM
+            col.PreferredWidth = WidthList[i-1] * PT
+
+
+
+
+
+
 
     '''Высота строк в таблице'''
     PT = 28.34646  # количество "пт" в см
@@ -166,7 +206,7 @@ def GO(ui, Form, sig):
     Doc.Tables(1).Rows.Height = 0.8 * PT  # RowHeight указывает на новую высоту строки в пунктах.
 
     try:
-        if ui.comboBox.currentIndex() == 2:
+        if ui.comboBox.currentIndex() == 4:
             Doc.Tables(1).Rows(StartRow).Height = 3.2 * PT  # RowHeight указывает на новую высоту строки в пунктах.
     except:
         pass
@@ -193,7 +233,34 @@ def GO(ui, Form, sig):
     # sleep(1)
 
     '''---------------------------------------------------------------'''
-    if ui.checkBox_2.isChecked() == True:
+    # '''Заменяем имена полей пользовательских свойств на имена по умолчанию, которые понимает Сапсан'''
+    # if ui.checkBox_3.isChecked() == False:
+    #     NameCustPropSapsan = [
+    #                     'Razrab',
+    #                     'Фамилия проверяющего',
+    #                     'Фамилия Гл. спец.',
+    #                     'Фамилия согласующего',
+    #                     'Фамилия нормоконтроллёра',
+    #                     'GipFamily',
+    #                     'Должность Гл. спец.',
+    #                     'Должность согласующего',
+    #                     'Дата нормоконтроля',
+    #                     'Дата проверки',
+    #                     'Дата согласования',
+    #                     'Шифр_документа',
+    #                     'Название проекта',
+    #                     'ObjectName',
+    #                     'StageKey',
+    #                     'Название спецификации',
+    #                     'Шифр_ревизии']
+
+    #     for name in Doc.CustomDocumentProperties:
+    #         for default_Name in NameCustPropSapsan:
+    #             if default_Name in name:
+    #                 Doc.CustomDocumentProperties(name).Name = default_Name
+
+
+    if ui.checkBox_3.isChecked() == True:
         '''Коллекция всех нижних колонтитулов'''
         Footers = Doc.Sections(1).Footers
         '''Подключаемся к 1-ой таблице нижнего колонтитула на 1-ом листе'''
@@ -204,140 +271,143 @@ def GO(ui, Form, sig):
         FootersTables_2 = Footers(2).Range.Tables(1)
         '''Все ячейки в таблице выравниваем по вертикали по центру'''
         FootersTables_2.Range.Cells.VerticalAlignment = 1
+        
+        '''Заполняем штамп фамилиями'''
+        if ui.checkBox_2.isChecked() == True:
+            '''Собираем фамилии из таблицы'''
+            doljList = []
+            UserList = []
+            for i in range(ui.tableWidget_1.rowCount()):
+                dolj = eval(f'ui.tableWidget_1.item({i}, 0).text()')
+                xxx = eval(f'ui.tableWidget_1.item({i}, 1).text()')
+                doljList.append(dolj)
+                if dolj == '':
+                    UserList.append('')
+                else:
+                    UserList.append(xxx)
 
-        '''Собираем фамилии из таблицы'''
-        doljList = []
-        UserList = []
-        for i in range(ui.tableWidget_1.rowCount()):
-            dolj = eval(f'ui.tableWidget_1.item({i}, 0).text()')
-            xxx = eval(f'ui.tableWidget_1.item({i}, 1).text()')
-            doljList.append(dolj)
-            if dolj == '':
-                UserList.append('')
-            else:
-                UserList.append(xxx)
+            # rowList = 6, 7, 8, 9, 10, 11
+            rowList = 7, 8, 9, 10, 11, 12
+            sec = time.localtime(time.time())
+            now = f'{str(sec.tm_mday).rjust(2, "0")}.{str(sec.tm_mon).rjust(2, "0")}.{str(sec.tm_year)[-2:]}'
 
-        rowList = 6, 7, 8, 9, 10, 11
-        sec = time.localtime(time.time())
-        now = f'{str(sec.tm_mday).rjust(2, "0")}.{str(sec.tm_mon).rjust(2, "0")}.{str(sec.tm_year)[-2:]}'
-
-    sig.signal_Probar.emit(progressBar, 45)
-    
-    '''Отправляем данные в штамп на 1-ом листе'''
-    cdpdict = {
-            'Razrab' : UserList[0],
-            'Фамилия проверяющего' : UserList[1],
-            'Фамилия Гл. спец.' : UserList[2],
-            'Фамилия согласующего' : UserList[3],
-            'Фамилия нормоконтроллёра' : UserList[4],
-            'GipFamily' : UserList[5],
-
-            'Должность Гл. спец.' : doljList[2],
-            'Должность согласующего' : doljList[3],
+            sig.signal_Probar.emit(progressBar, 45)
             
-            'Дата нормоконтроля' : now,
-            'Дата проверки' : now,
-            'Дата согласования' : now,
-            
-            'Шифр_документа' : ui.plainTextEdit_4.toPlainText(),
-            'Название проекта' : ui.plainTextEdit_5.toPlainText(),
-            'ObjectName' : ui.plainTextEdit_6.toPlainText(),
-            'StageKey' : ui.plainTextEdit_8.toPlainText(),
-            'Название спецификации' : ui.plainTextEdit_9.toPlainText(),
-            'Шифр_ревизии' : 'C01'
-            }
+            '''Отправляем данные в штамп на 1-ом листе'''
+            cdpdict = {
+                    'Razrab' : UserList[0],
+                    'Фамилия проверяющего' : UserList[1],
+                    'Фамилия Гл. спец.' : UserList[2],
+                    'Фамилия согласующего' : UserList[3],
+                    'Фамилия нормоконтроллёра' : UserList[4],
+                    'GipFamily' : UserList[5],
 
-    '''Заменяем значение полей пользовательских свойств'''
-    for key, value in cdpdict.items():
-        Doc.CustomDocumentProperties(key).Value = value
+                    'Должность Гл. спец.' : doljList[2],
+                    'Должность согласующего' : doljList[3],
+                    
+                    'Дата нормоконтроля' : now,
+                    'Дата проверки' : now,
+                    'Дата согласования' : now,
+                    
+                    'Шифр_документа' : ui.plainTextEdit_4.toPlainText(),
+                    'Название проекта' : ui.plainTextEdit_5.toPlainText(),
+                    'ObjectName' : ui.plainTextEdit_6.toPlainText(),
+                    'StageKey' : ui.plainTextEdit_8.toPlainText(),
+                    'Название спецификации' : ui.plainTextEdit_9.toPlainText(),
+                    'Шифр_ревизии' : 'C01'
+                    }
 
-    '''Обновляем поля свойств в основной области с текстом'''
-    Doc.Fields.Update()
-    '''Обновляем поля свойств в нижнем колонтитуле'''
-    Footers = Doc.Sections(1).Footers
-    for i in range(1, Footers.Count + 1):
-        Footers(i).Range.Fields.Update()
+            '''Заменяем значение полей пользовательских свойств'''
+            for key, value in cdpdict.items():
+                Doc.CustomDocumentProperties(key).Value = value
+
+            '''Обновляем поля свойств в основной области с текстом'''
+            Doc.Fields.Update()
+            '''Обновляем поля свойств в нижнем колонтитуле'''
+            Footers = Doc.Sections(1).Footers
+            for i in range(1, Footers.Count + 1):
+                Footers(i).Range.Fields.Update()
 
  
-    '''---------------------------------------------------------------'''
-    '''Работа с подписями'''
-    directory = str(ui.plainTextEdit_3.toPlainText())
-    if ui.checkBox.isChecked() == True:
-        if directory == '':
-            sig.signal_err.emit(Form,
-                                "Подписи не были вставлены в штамп.\nУкажите папку с подписями в формате *.jpg , *.png")
-            if Doc.Saved == False: Doc.Save()
-            return
-        try:
-            direct = os.listdir(directory)
-        except FileNotFoundError:
-            sig.signal_err.emit(Form, "Папка с подписями не найдена")
-            return
+        '''---------------------------------------------------------------'''
+        '''Работа с подписями'''
+        directory = str(ui.plainTextEdit_3.toPlainText())
+        if ui.checkBox.isChecked() == True:
+            if directory == '':
+                sig.signal_err.emit(Form, "Подписи не были вставлены в штамп.\nУкажите папку с подписями в формате *.jpg , *.png")
+                if Doc.Saved == False: Doc.Save()
+                return
+            try:
+                direct = os.listdir(directory)
+            except FileNotFoundError:
+                sig.signal_err.emit(Form, "Папка с подписями не найдена")
+                return
 
-        '''Собираем список с полным именем файлов в папке с подписями'''
-        PatchFileList = []
-        for filename in direct:
-            FullName = os.path.join(directory, filename)
-            if os.path.isfile(FullName):
-                if ".png" in FullName:
-                    PatchFileList.append(FullName)
-                    continue
-                if ".jpg" in FullName:
-                    PatchFileList.append(FullName)
+            '''Собираем список с полным именем файлов в папке с подписями'''
+            PatchFileList = []
+            for filename in direct:
+                FullName = os.path.join(directory, filename)
+                if os.path.isfile(FullName):
+                    if ".png" in FullName:
+                        PatchFileList.append(FullName)
+                        continue
+                    if ".jpg" in FullName:
+                        PatchFileList.append(FullName)
 
-        patchPod = []
-        userErr = []
-        '''Для каждого значения фамилии из таблицы'''
-        for User in UserList:
-            UserTrue = False
-            '''если оно не равно '' '''
-            if User != '':
-                '''перебираем все полные пути файлов в папке'''
-                for patchP in PatchFileList:
-                    '''если фамилия есть в адрессе файла'''
-                    if User in patchP:
-                        '''обозначаем наличие фамилии в названиях файлов в папке'''
-                        UserTrue = True
-                        '''добавляем адресс файла для фамилии из таблицы'''
-                        patchPod.append(patchP)
-                        '''Производит переход за пределы объемлющего цикла (всей инструкции цикла 
-                        на уровень "for User in UserList") при нахождении фамилии'''
-                        break
+            patchPod = []
+            userErr = []
+            '''Для каждого значения фамилии из таблицы'''
+            for User in UserList:
+                UserTrue = False
+                '''если оно не равно '' '''
+                if User != '':
+                    '''перебираем все полные пути файлов в папке'''
+                    for patchP in PatchFileList:
+                        '''если фамилия есть в адресе файла'''
+                        if User in patchP:
+                            '''обозначаем наличие фамилии в названиях файлов в папке'''
+                            UserTrue = True
+                            '''добавляем адрес файла для фамилии из таблицы'''
+                            patchPod.append(patchP)
+                            '''Производит переход за пределы объемлющего цикла (всей инструкции цикла 
+                            на уровень "for User in UserList") при нахождении фамилии'''
+                            break
 
-                '''Если наличие файла в папке не подтвердилось'''
-                if UserTrue == False:
-                    '''Cписок не найденных фамилий'''
-                    userErr.append(f'"{User}"')
+                    '''Если наличие файла в папке не подтвердилось'''
+                    if UserTrue == False:
+                        '''Cписок не найденных фамилий'''
+                        userErr.append(f'"{User}"')
+                        patchPod.append('')
+                if User == '':
                     patchPod.append('')
-            if User == '':
-                patchPod.append('')
 
-        '''Работа над ошибками'''
-        if userErr != []:
-            UserErrList = ', '.join(userErr)
-            text = f"Не найдены картинки с фамилией {UserErrList} в папке: \n{directory}"
-            sig.signal_err.emit(Form, text)
-        # printTabconsole([UserList, rowList, patchPod], add_column = True)
-        '''Вставляем картинки с подписями в штамп и делаем их перед текстом'''
-        xxx = 50
-        for i in range(len(patchPod)):
-            xxx += 8
-            sig.signal_Probar.emit(progressBar, xxx)
-            if patchPod[i] != '':
-                if '..png' in patchPod[i]:
-                    FileName = patchPod[i]
-                else:
-                    FileName = imageZeroFon.GO(patchPod[i])
-                img = FootersTables_2.Cell(rowList[i], 4).Range.InlineShapes.AddPicture(FileName=FileName, LinkToFile=False, SaveWithDocument=True)
-                img.ConvertToShape().WrapFormat.Type = 3
-                sleep(0.5)
+            '''Работа над ошибками'''
+            if userErr != []:
+                UserErrList = ', '.join(userErr)
+                text = f"Не найдены картинки с фамилией {UserErrList} в папке: \n{directory}"
+                sig.signal_err.emit(Form, text)
+            # printTabconsole([UserList, rowList, patchPod], add_column = True)
 
-    if ui.checkBox_3.isChecked() == True:
+            '''Вставляем картинки с подписями в штамп и делаем их перед текстом'''
+            xxx = 50
+            for i in range(len(patchPod)):
+                xxx += 8
+                sig.signal_Probar.emit(progressBar, xxx)
+                if patchPod[i] != '':
+                    if '..png' in patchPod[i]:
+                        FileName = patchPod[i]
+                    else:
+                        FileName = imageZeroFon.GO(patchPod[i])
+                    img = FootersTables_2.Cell(rowList[i], 4).Range.InlineShapes.AddPicture(FileName=FileName, LinkToFile=False, SaveWithDocument=True)
+                    img.ConvertToShape().WrapFormat.Type = 3
+                    sleep(0.5)
+
         if Doc.Saved == False:
             try:
                 Doc.Save()
             except:
                 pass
+    sig.signal_label.emit(ui.label, "Выполнено: таблица вставлена в документ Word . . .")
 
     '''---------------------------------------------------------------'''
 if __name__ == "__main__":

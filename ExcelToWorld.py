@@ -38,7 +38,6 @@ Form.setWindowTitle(_translate("Form", Title))
 
 def startFun(my_func):
     """Обертка функции (декоратор)"""
-
     def wrapper():
         Sql("ExcelToWorld")
         pushButtonList = [ui.pushButton_4]
@@ -60,7 +59,7 @@ def startFun(my_func):
             sig.signal_bool.emit(i, False)
         sig.signal_Probar.emit(progressBar, 0)
         sig.signal_color.emit(progressBar, 100)
-        sig.signal_label.emit(label, "Выполнено . . .")
+        # sig.signal_label.emit(label, "Выполнено: таблица вставлена в документ Word . . .")
 
     return wrapper
 
@@ -125,10 +124,13 @@ def AppQuit():
                 ui.tabWidget.isEnabled(),
                 ui.tableWidget_1.isEnabled(),
                 ui.plainTextEdit_3.isEnabled(),
-                ui.plainTextEdit_10.isEnabled()
+                ui.plainTextEdit_10.isEnabled(),
+                ui.frame.isEnabled(),
+                ui.checkBox.isEnabled()
                 ]
     with open("saveData.ini", "wb") as f:
         pickle.dump(saveData, f) # помещаем объект в файл
+
 app.aboutToQuit.connect(AppQuit)
 
 """Если файл с данными НЕ существует"""
@@ -142,7 +144,7 @@ if os.path.exists(savePathFile) == False:
 with open("saveData.ini", "rb") as f:
     try:
         loadx = pickle.load(f) # извлекаем ообъект из файла
-        print(loadx)
+        # print('loadx = ', loadx)
         ui.plainTextEdit_3.setPlainText(f"{loadx[0]}")
         ui.plainTextEdit_8.setPlainText(f"{loadx[1]}")
         ui.plainTextEdit_9.setPlainText(f"{loadx[2]}")
@@ -156,6 +158,8 @@ with open("saveData.ini", "rb") as f:
         ui.tableWidget_1.setEnabled(loadx[9])
         ui.plainTextEdit_3.setEnabled(loadx[10])
         ui.plainTextEdit_10.setEnabled(loadx[11])
+        ui.frame.setEnabled(loadx[12])
+        ui.checkBox.setEnabled(loadx[13])
     except:
         pass
 
