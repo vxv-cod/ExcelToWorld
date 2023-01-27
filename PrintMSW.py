@@ -179,13 +179,10 @@ def GO(ui, Form, sig):
 
     '''Ширина столбцов'''
     if ui.comboBox.currentIndex() == 4:
-        fistRow = importdata(sheet, 1, 2, 10, 2)
-        fistRow = [fistRow.index(i) + 1  for i in fistRow if i == 'Наименование']
-        print(fistRow[0])
         PT = 28.34646
         '''Установка единицы измерения размера таблицы''' 
         tabWord.PreferredWidthType = 3    # CM        
-        WidthList = [1.0, 5.0, 3.5, 3.5, 5.0, 2.7, 2.7, 2.7, 2.7]
+        WidthList = [2, 13, 6, 3.5, 4.5, 2, 2, 2.5, 4]
         '''Задаем общую ширину таблицы для более точного определения'''
         tabWord.PreferredWidth = sum(WidthList) * PT
         '''Проходим по всем колонкам для установки размеров из списка'''
@@ -411,8 +408,10 @@ def GO(ui, Form, sig):
 
     '''---------------------------------------------------------------'''
 if __name__ == "__main__":
-    import sys
-    from ExcelToWorld import app, ui, Form, sig
+    # import sys
+    # from ExcelToWorld import app, ui, Form, sig
 
-    GO(ui, Form, sig)
-    sys.exit(app.exec_())
+    # GO(ui, Form, sig)
+    # sys.exit(app.exec_())
+    
+    os.system(r'call C:\vxvproj\tnnc-ExcelToWorld\tnnc-ExcelToWorld\ExcelToWorld.py')
